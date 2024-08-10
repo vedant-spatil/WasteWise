@@ -4,5 +4,7 @@ roboflow
 streamlit
 opencv-python==4.10.0.84
 imutils==0.5.4
+pandas
+requests
 
 -e .
