@@ -1,17 +1,59 @@
-
 import tempfile
 import cv2
 import streamlit as st
 from ultralytics import YOLO
 from streamlit_option_menu import option_menu
+img="D:\WasteWise\Assets\Art.jpg"
 
 def main():
 
     #Functions
 
     def home_page():
-        st.title("Home")
-        st.write("Welcome to the Home page of the app!")
+        
+        st.markdown(
+        """
+        <style>
+            .big-font {
+                font-size:60px !important;
+                line-height:1.3;
+                padding-bottom:15px;
+                padding-left:15px;
+            }
+            .medium-font {
+                font-size:25px !important;
+                color:grey;
+                line-height:1.3;
+                padding-bottom:15px;
+                padding-left:15px;
+            }
+            .but {
+                margin-left:15px;
+                text-align:center;
+                border-radius:5px;
+                padding:5px 10px 5px 10px;
+                border: solid 1px #FF4B4B;
+                color:#ECECEC;
+                background-color:#FF4B4B;
+            }
+            .but:active {
+                border: solid 1px #FF4B4B;
+                background-color: white;
+                color:#FF4B4B;
+            }
+        </style>
+        """,
+        unsafe_allow_html=True,
+        )
+
+        col1, col2 = st.columns([2,1],gap="medium",vertical_alignment="center")
+        with col1:
+            st.markdown('<p class="big-font">Empowering Waste Management with <b>Waste Wise</b></p>', unsafe_allow_html=True)
+            st.markdown('<p class="medium-font">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. </p>', unsafe_allow_html=True)
+            #btn1=st.button(label="Get Started")
+            st.markdown('<button class="but">Get Started</button>', unsafe_allow_html=True)
+        with col2:
+            st.image(img,width=400)
     
     def test_page():
         st.title("Test")
