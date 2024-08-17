@@ -38,11 +38,11 @@ def main():
                     confidence = box.conf[0].item()  # Get the confidence score
                     
                     # Draw the bounding box
-                    cv2.rectangle(image, (x1, y1), (x2, y2), color=(0, 255, 0), thickness=2)
+                    cv2.rectangle(image, (x1, y1), (x2, y2), color=(0, 255, 0), thickness=5)
                     
                     # Draw the label and confidence
                     cv2.putText(image, f"{label} {confidence:.2f}", (x1, y1 - 10), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                    cv2.FONT_HERSHEY_SIMPLEX, 2.5, (0, 255, 0), 5)
 
         return image
           
@@ -167,45 +167,91 @@ def main():
         #     st.sidebar.text('Input Video')
         #     st.sidebar.video(demo_bytes)
         # print(tffile.name)
+        #stframe= st.empty()
 
-        # stframe= st.empty()
-        # st.sidebar.markdown('---')
-
-        # kpi1, kpi2, kpi3 = st.columns(3)
-
-        # with kpi1:
-        #     st.markdown("**Frame Rate**")
-        #     kpi1_text= st.markdown(0)
-
-        # with kpi2:
-        #     st.markdown("**Tracked Objects**")
-        #     kpi2_text= st.markdown(0)
-
-        # with kpi3:
-        #     st.markdown("**Width**")
-        #     kpi3_text= st.markdown(0)
 
         #Main Page-----------------------------------------------------------
 
+        st.markdown("")
+
         #Select the medium
-        assigned_source_id = []
         assigned_source = st.selectbox('Select The Source', list(sources))
-        assigned_source_id.append(sources.index(assigned_source))
 
-         #Upload file
-        uploaded_file = st.file_uploader("Upload an image...", type=["jpg", "jpeg", "png"])
-        if uploaded_file is not None:
-            image = Image.open(uploaded_file)
-            image = np.array(image)
+        #Upload file
 
-            result = predictTrash(model, image, save_img, confidence)
+        #Image
+        if assigned_source == "Image":
+            uploaded_file = st.file_uploader("Upload an image...", type=["jpg", "jpeg", "png", "webp"])
+            if uploaded_file is not None:
+                image = Image.open(uploaded_file)
+                image = np.array(image)
 
-            image_with_boxes = draw_bounding_boxes(image, result)
+                result = predictTrash(model, image, save_img, confidence)
 
-            st.image(image_with_boxes, caption='Processed Image', use_column_width=True)
-            
-            n = count(result)
-            st.markdown(f"Total objects detected: **{n}**")
+                image_with_boxes = draw_bounding_boxes(image, result)
+
+                st.image(image_with_boxes, caption='Processed Image', use_column_width=True)
+
+                # Columns of info
+                kpi1, kpi2, kpi3 = st.columns(3)
+
+                with kpi1:
+                    st.markdown("**Tracked Objects**")
+                    n = count(result)
+                    st.markdown(n)
+
+                with kpi2:
+                    st.markdown("**Classes**")
+                    kpi1_text= st.markdown(0)
+
+                with kpi3:
+                    st.markdown("**Confidence**")
+                    kpi3_text= st.markdown(0)
+                
+        #Video     
+        elif assigned_source == "Video":
+                # Columns of info
+                kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+
+                with kpi1:
+                    st.markdown("**Frame Rate**")
+                    st.markdown(0)
+
+                with kpi2:
+                    st.markdown("**Tracked Objects**")
+                    #n = count(result)
+                    st.markdown(0)
+
+                with kpi3:
+                    st.markdown("**Classes**")
+                    kpi1_text= st.markdown(0)
+
+                with kpi4:
+                    st.markdown("**Confidence**")
+                    kpi3_text= st.markdown(0)
+
+        #Webcam
+        elif assigned_source == "Webcam":
+                # Columns of info
+                kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+
+                with kpi1:
+                    st.markdown("**Frame Rate**")
+                    st.markdown(0)
+
+                with kpi2:
+                    st.markdown("**Tracked Objects**")
+                    #n = count(result)
+                    st.markdown(0)
+
+                with kpi3:
+                    st.markdown("**Classes**")
+                    kpi1_text= st.markdown(0)
+
+                with kpi4:
+                    st.markdown("**Confidence**")
+                    kpi3_text= st.markdown(0)
+        
         
     def about_page():
         st.markdown(
@@ -251,8 +297,8 @@ def main():
         st.markdown(
             """
             <div class="wrapper">
-                <p class="big-font">Why is WasteWise essential for modern waste management?</p>
-                <p class="medium-font">WasteWise is crucial for modern waste management as it provides an innovative solution to one of the most persistent challenges — effective waste segregation. By accurately detecting and classifying different types of waste, WasteWise simplifies the process of separating recyclable materials from general waste, making collection and disposal more efficient. This not only benefits the environment but also assists workers who struggle to identify and sort waste manually, reducing the margin for error and enhancing their safety. WasteWise can be seamlessly integrated into household waste management, ensuring that organic, recyclable, and hazardous materials are correctly sorted at the source, thereby streamlining the recycling process. Additionally, its application extends to underwater environments, where it aids in the detection and segregation of aquatic waste, a crucial step in combating water pollution and preserving marine ecosystems. By addressing these multifaceted issues, WasteWise emerges as an indispensable tool in our collective efforts toward sustainable waste management.</p>
+                <p class="big-font">Why is WasteWise essential for modern waste management?</p><br></br>
+                <p class="medium-font">WasteWise is a crucial tool for modern waste management, offering an innovative solution to effective waste segregation. By accurately detecting and classifying waste, it simplifies the separation of recyclables from general waste, improving collection efficiency. This benefits the environment, enhances worker safety by reducing manual sorting errors, and integrates seamlessly into household waste management. Additionally, WasteWise aids in underwater environments by detecting and segregating aquatic waste, supporting water pollution control and marine ecosystem preservation. Overall, WasteWise plays a vital role in advancing sustainable waste management.</p>
             </div>
             <div class="wrapper-center">
                 <p class="big-font">See WasteWise in Action</p> 
@@ -346,7 +392,7 @@ def main():
         'Garbage Detection': trashModel,
         'Water Trash Detection': waterModel
     }
-    DEMO_IMG = 'D:/WasteWise/Assets/trash_bottle.jpg'
+    DEMO_IMG = 'https://images.pexels.com/photos/2409022/pexels-photo-2409022.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1'
 
 
     #Navbar
