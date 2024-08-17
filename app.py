@@ -7,7 +7,7 @@ import cv2
 import streamlit as st
 from ultralytics import YOLO
 from streamlit_option_menu import option_menu
-img="D:\WasteWise\Assets\Art.jpg"
+img="https://i.pinimg.com/564x/a0/17/33/a01733a27004208af24df829129c08ab.jpg"
 
 def main():
 
