@@ -165,4 +165,3 @@ cython_debug/
 #Dataset
 GARBAGE-CLASSIFICATION-3-2
 runs
-train.ipynb
