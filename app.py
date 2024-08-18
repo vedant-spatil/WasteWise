@@ -7,7 +7,20 @@ import cv2
 import streamlit as st
 from ultralytics import YOLO
 from streamlit_option_menu import option_menu
-img="https://i.pinimg.com/564x/a0/17/33/a01733a27004208af24df829129c08ab.jpg"
+
+#Defining Assets
+hero="https://i.pinimg.com/564x/a0/17/33/a01733a27004208af24df829129c08ab.jpg"
+pfp="https://i.imgur.com/b25ZXQA.png"
+trashNames = ['Biodegradable', 'Cardboard', 'Glass', 'Metal', 'Paper', 'Plastic']
+waterNames = ['Plastic','Bio','rov']
+trashModel = YOLO('Models/garbClass_25epochs.pt')
+waterModel = YOLO('Models/waterTrash_25epochs.pt')
+sources=['Image','Video','Webcam']
+model_list = {
+    'Garbage Detection': trashModel,
+    'Water Trash Detection': waterModel
+}
+
 
 def main():
 
@@ -19,6 +32,8 @@ def main():
     #     print("Using Device: ", self.device)
 
     def predictTrash(model, source, save_img, confidence):
+        if source.shape[2] == 4:
+            source = cv2.cvtColor(source, cv2.COLOR_RGBA2RGB)
         prediction = model.predict(source=source, save=save_img, conf=confidence)
         return prediction
 
@@ -42,7 +57,7 @@ def main():
                     
                     # Draw the label and confidence
                     cv2.putText(image, f"{label} {confidence:.2f}", (x1, y1 - 10), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 2.5, (0, 255, 0), 5)
+                    cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 5)
 
         return image
           
@@ -92,20 +107,25 @@ def main():
         col1, col2 = st.columns([2,1],gap="medium",vertical_alignment="center")
         with col1:
             st.markdown('<p class="big-font">Empowering Waste Management with <b>Waste Wise</b></p>', unsafe_allow_html=True)
-            st.markdown('<p class="medium-font">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. </p>', unsafe_allow_html=True)
-            #btn1=st.button(label="Get Started")
+            st.markdown('<p class="medium-font">Advanced Vision AI for Accurate Trash Detection and Streamlined Waste Management, ensuring a cleaner and greener future.</p>', unsafe_allow_html=True)
+
+            # btn1=st.button(label="Get Started")
             st.markdown(
                 """
                 <div class="buttons-div">
-                <button class="but">Get Started</button>
-                <button class="but">Learn More</button>
+                <button class="but" >Get Started</button>
+                <button class="but" >Learn More</button>
                 </div>
                 """, 
                 unsafe_allow_html=True
                 )
+            # if st.button('Test', key='test_button', on_click=lambda: navigate_to('Test')):
+            #     pass
+            # if st.button('About', key='about_button', on_click=lambda: navigate_to('About')):
+            #     pass
 
         with col2:
-            st.image(img,width=400)
+            st.image(hero,width=400)
     
     def test_page():
         
@@ -116,7 +136,6 @@ def main():
             st.title('Model')
             assigned_model_display_name = st.selectbox('Select The Model', list(model_list.keys()))
             model = model_list[assigned_model_display_name]
-            assigned_model_id = list(model_list.keys()).index(assigned_model_display_name)
 
             st.markdown('---')
 
@@ -138,10 +157,15 @@ def main():
             save_img = st.checkbox('Save Output')
             enable_GPU = st.checkbox('Enable GPU')
             custom_classes = st.checkbox('Use Custom Classes')
-            
+
+            if assigned_model_display_name == "Water Trash Detection":
+                names=waterNames
+            else :
+                names=trashNames
+
             assigned_class_id = []
             if custom_classes:
-                assigned_class = st.multiselect('Select The Custom Classes', list(names), default='Plastic')
+                assigned_class = st.multiselect('Select The Custom Classes', list(names), default="Plastic")
                 for each in assigned_class:
                     assigned_class_id.append(names.index(each))
             
@@ -178,6 +202,41 @@ def main():
         assigned_source = st.selectbox('Select The Source', list(sources))
 
         #Upload file
+        st.markdown(
+            """
+            <style>
+                .red-div{
+                    background-color: #FF4B4B;
+                    min-height: 30vh;
+                    display:flex;
+                    flex-direction: column;
+                    align-items:center;
+                    justify-content:center;
+                    color: #ECECEC;
+                    border-radius:25px;
+                    padding: 10px;
+                }
+                .grey-div{
+                    background-color: #D6D6D6;
+                    min-height: 30vh;
+                    display:flex;
+                    flex-direction: column;
+                    align-items:center;
+                    justify-content:center;
+                    border-radius:25px;
+                    padding: 10px;
+                }
+                .big-font {
+                    font-size:40px !important;
+                    font-weight:bold;
+                }
+                .medium-font {
+                    font-size:25px !important;
+                }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
 
         #Image
         if assigned_source == "Image":
@@ -196,17 +255,38 @@ def main():
                 kpi1, kpi2, kpi3 = st.columns(3)
 
                 with kpi1:
-                    st.markdown("**Tracked Objects**")
                     n = count(result)
-                    st.markdown(n)
+                    st.markdown(
+                        f"""
+                        <div class="red-div">
+                        <p class="big-font">Total Items</p>
+                        <p class="medium-font">{n}</p>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
 
                 with kpi2:
-                    st.markdown("**Classes**")
-                    kpi1_text= st.markdown(0)
+                    st.markdown(
+                        """
+                        <div class="grey-div">
+                        <p class="big-font">Classes</p>
+                        <p class="medium-font">0</p>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
 
                 with kpi3:
-                    st.markdown("**Confidence**")
-                    kpi3_text= st.markdown(0)
+                    st.markdown(
+                        """
+                        <div class="red-div">
+                        <p class="big-font">Confidence</p>
+                        <p class="medium-font">0</p>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
                 
         #Video     
         elif assigned_source == "Video":
@@ -214,21 +294,48 @@ def main():
                 kpi1, kpi2, kpi3, kpi4 = st.columns(4)
 
                 with kpi1:
-                    st.markdown("**Frame Rate**")
-                    st.markdown(0)
+                    st.markdown(
+                        """
+                        <div class="red-div">
+                        <p class="big-font">Total Items</p>
+                        <p class="medium-font">0</p>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
 
                 with kpi2:
-                    st.markdown("**Tracked Objects**")
-                    #n = count(result)
-                    st.markdown(0)
+                    st.markdown(
+                        """
+                        <div class="grey-div">
+                        <p class="big-font">Classes</p>
+                        <p class="medium-font">0</p>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
 
                 with kpi3:
-                    st.markdown("**Classes**")
-                    kpi1_text= st.markdown(0)
+                    st.markdown(
+                        """
+                        <div class="red-div">
+                        <p class="big-font">Confidence</p>
+                        <p class="medium-font">0</p>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
 
                 with kpi4:
-                    st.markdown("**Confidence**")
-                    kpi3_text= st.markdown(0)
+                    st.markdown(
+                        """
+                        <div class="grey-div">
+                        <p class="big-font">Frame Rate</p>
+                        <p class="medium-font">0</p>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
 
         #Webcam
         elif assigned_source == "Webcam":
@@ -236,23 +343,49 @@ def main():
                 kpi1, kpi2, kpi3, kpi4 = st.columns(4)
 
                 with kpi1:
-                    st.markdown("**Frame Rate**")
-                    st.markdown(0)
+                    st.markdown(
+                        """
+                        <div class="red-div">
+                        <p class="big-font">Total Items</p>
+                        <p class="medium-font">0</p>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
 
                 with kpi2:
-                    st.markdown("**Tracked Objects**")
-                    #n = count(result)
-                    st.markdown(0)
+                    st.markdown(
+                        """
+                        <div class="grey-div">
+                        <p class="big-font">Classes</p>
+                        <p class="medium-font">0</p>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
 
                 with kpi3:
-                    st.markdown("**Classes**")
-                    kpi1_text= st.markdown(0)
+                    st.markdown(
+                        """
+                        <div class="red-div">
+                        <p class="big-font">Confidence</p>
+                        <p class="medium-font">0</p>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
 
                 with kpi4:
-                    st.markdown("**Confidence**")
-                    kpi3_text= st.markdown(0)
-        
-        
+                    st.markdown(
+                        """
+                        <div class="grey-div">
+                        <p class="big-font">Frame Rate</p>
+                        <p class="medium-font">0</p>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+          
     def about_page():
         st.markdown(
         """
@@ -281,6 +414,7 @@ def main():
                 font-size:60px !important;
                 line-height:1.1;
                 padding-left:15px;
+                margin-bottom:40px;
             }
             .medium-font {
                 font-size:25px !important;
@@ -297,7 +431,7 @@ def main():
         st.markdown(
             """
             <div class="wrapper">
-                <p class="big-font">Why is WasteWise essential for modern waste management?</p><br></br>
+                <p class="big-font">Why is WasteWise essential for modern waste management?</p>
                 <p class="medium-font">WasteWise is a crucial tool for modern waste management, offering an innovative solution to effective waste segregation. By accurately detecting and classifying waste, it simplifies the separation of recyclables from general waste, improving collection efficiency. This benefits the environment, enhances worker safety by reducing manual sorting errors, and integrates seamlessly into household waste management. Additionally, WasteWise aids in underwater environments by detecting and segregating aquatic waste, supporting water pollution control and marine ecosystem preservation. Overall, WasteWise plays a vital role in advancing sustainable waste management.</p>
             </div>
             <div class="wrapper-center">
@@ -308,61 +442,120 @@ def main():
             )
 
     def contact_page():
-        #Assigning bootstap icons to the page
+
         st.markdown(
-            """
-            <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
-            """,
-            unsafe_allow_html=True,
+        """
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+        <style>
+            .wrapper{
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                margin-top: 10px;
+                padding-left: 10px;
+                padding-right: 10px;
+            }
+            .big-font {
+                font-size:60px !important;
+                line-height:1.1;
+                padding-left:15px;
+                margin-bottom:40px;
+            }
+            .medium-font {
+                font-size:25px !important;
+                color:grey;
+                line-height:1.3;
+                padding-bottom:0px;
+                padding-left:15px;
+            }
+            .buttons-div{
+                display:flex;
+                align-items:center;
+                # justify-content:center;
+                justify-content:flex-start;
+                gap:1vw;
+            }
+            .but {
+                margin-left:15px;
+                text-align:center;
+                border-radius:5px;
+                padding:5px 10px 5px 10px;
+                border: solid 1px #FF4B4B;
+                color:#ECECEC;
+                background-color:#FF4B4B;
+            }
+            .but:active {
+                border: solid 1px #FF4B4B;
+                background-color: white;
+                color:#FF4B4B;
+            }
+        </style>
+        """,
+        unsafe_allow_html=True,
         )
 
-        #Sidebar------------------------
-        st.markdown(
-            """
-            <style>
-            [data-testid="stSidebar"][aria-expanded="true"]>{width: 900px;}
-            [data-testid="stSidebar"][aria-expanded="true"]>{width: 900px; margin-left: -400px}
-            </style>
-            """,
-            unsafe_allow_html = True,
-        )
+        #Sidebar
+        with st.sidebar:
+            st.markdown(
+                """
+                <style>
+                [data-testid="stSidebar"][aria-expanded="true"]>{width: 900px;}
+                [data-testid="stSidebar"][aria-expanded="true"]>{width: 900px; margin-left: -400px}
+                </style>
+                """,
+                unsafe_allow_html = True,
+            )
 
-        #Arrow icon
-        st.sidebar.markdown(
-            """
-            <h1 style="text-align: right;"><i class="bi bi-arrow-down-left"></i></h1>
-            <br></br>
-            """,
-            unsafe_allow_html=True,
-        )
+            #Arrow icon
+            st.markdown(
+                """
+                <h1 style="text-align: right;"><i class="bi bi-arrow-down-left"></i></h1>
+                <br></br>
+                """,
+                unsafe_allow_html=True,
+            )
 
-        #Contact Details
-        st.sidebar.markdown(
-            """
-            <div>
-            <h4 style="color: #FF4B4B">Contact Details</h4>
-            <h2 style="line-height:0.9">
-                <i class="bi bi-envelope-at"></i><a href="mailto:vedantsudhirpatil.com" style="text-decoration: none; color:#31333F; margin-left:5px;"> vedantsudhirpatil@gmail.com</a><br></br>
-                <i class="bi bi-telephone"></i><a href="tel: +919540386773" style="text-decoration: none; color:#31333F; margin-left:5px;"> +91 9540386773</a>
-            </h2>
-            <br></br>
-            <div>
-            <div>
-            <h4 style="color: #FF4B4B">Socials</h4>
-            <h2 style="line-height:0.9">
-                <i class="bi bi-linkedin"></i><a href="https://www.linkedin.com/in/vedantspatil" style="text-decoration: none; color:#31333F; margin-left:10px;"> Linkedin</a><br></br>
-                <i class="bi bi-github"></i><a href="https://github.com/Vedant-SPatil" style="text-decoration: none; color:#31333F; margin-left:10px;"> Github</a><br></br>
-                <i class="bi bi-twitter-x"></i><a href="https://twitter.com/Vedant_SPatil" style="text-decoration: none; color:#31333F; margin-left:10px;"> Twitter</a><br></br>
-                <i class="bi bi-instagram"></i><a href="https://www.instagram.com/vedant_spatil/" style="text-decoration: none; color:#31333F; margin-left:10px;"> Instagram</a>
-            </h2>
-            <div>
-            """,
-            unsafe_allow_html=True,
-        )
+            #Contact Details
+            st.markdown(
+                """
+                <div>
+                <h4 style="color: #FF4B4B">Contact Details</h4>
+                <h2 style="line-height:0.9">
+                    <i class="bi bi-envelope-at"></i><a href="mailto:vedantsudhirpatil.com" style="text-decoration: none; color:#31333F; margin-left:5px;"> vedantsudhirpatil@gmail.com</a><br></br>
+                    <i class="bi bi-telephone"></i><a href="tel: +919540386773" style="text-decoration: none; color:#31333F; margin-left:5px;"> +91 9540386773</a>
+                </h2>
+                <br></br>
+                <div>
+                <div>
+                <h4 style="color: #FF4B4B">Socials</h4>
+                <h2 style="line-height:0.9">
+                    <i class="bi bi-linkedin"></i><a href="https://www.linkedin.com/in/vedantspatil" style="text-decoration: none; color:#31333F; margin-left:10px;"> Linkedin</a><br></br>
+                    <i class="bi bi-github"></i><a href="https://github.com/Vedant-SPatil" style="text-decoration: none; color:#31333F; margin-left:10px;"> Github</a><br></br>
+                    <i class="bi bi-twitter-x"></i><a href="https://twitter.com/Vedant_SPatil" style="text-decoration: none; color:#31333F; margin-left:10px;"> Twitter</a><br></br>
+                    <i class="bi bi-instagram"></i><a href="https://www.instagram.com/vedant_spatil/" style="text-decoration: none; color:#31333F; margin-left:10px;"> Instagram</a>
+                </h2>
+                <div>
+                """,
+                unsafe_allow_html=True,
+            )
 
         #Main Page
-        st.title("Contact")
-        st.write("Welcome to the Contact page of the app!")
+        st.markdown("""
+                    <div class="wrapper">
+                    <p class="big-font">Leveraging machine learning to convert data into innovative solutions.</p>
+                    </div>
+                    """,unsafe_allow_html=True)
+        col1, col2 = st.columns([2,1],gap="medium",vertical_alignment="center")
+        with col1:
+            st.markdown("""
+                        <div class="wrapper">
+                        <p class="medium-font">I'm <b><u>Vedant Sudhir Patil</u></b>, a web developer and machine learning engineer.<br></br>
+                                            I contributed to Social Summer of Code, Season 3, and specialize in building impactful projects using Python, JavaScript, Java, React.js and Node.js.
+                        </p>
+                        </div>
+                        """,unsafe_allow_html=True)
+        with col2:
+            st.image(pfp)
     
     def hide_hamburger_menu():
         hide_streamlit_style = """
@@ -383,19 +576,13 @@ def main():
         layout="wide",
     )
 
-    #Streamlit (Information Arrays)
-    names = ['Biodegradable', 'Cardboard', 'Glass', 'Metal', 'Paper', 'Plastic']
-    trashModel = YOLO('Models/garbClass_25epochs.pt')
-    waterModel = YOLO('Models/waterTrash_25epochs.pt')
-    sources=['Image','Video','Webcam']
-    model_list = {
-        'Garbage Detection': trashModel,
-        'Water Trash Detection': waterModel
-    }
-    DEMO_IMG = 'https://images.pexels.com/photos/2409022/pexels-photo-2409022.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1'
-
-
     #Navbar
+    if 'selected_page' not in st.session_state:
+        st.session_state.selected_page = 'Home'
+
+    def navigate_to(page):
+        st.session_state.selected_page = page
+
     selected = option_menu(
         menu_title=None,
         options=['Home', 'Test', 'About', 'Contact'],
@@ -404,12 +591,13 @@ def main():
         default_index=0,
         orientation='horizontal',
     )
+    st.session_state.selected_page = selected
     
-    if selected == 'Test':
+    if st.session_state.selected_page == 'Test':
         test_page()  
-    elif selected == 'About':
+    elif st.session_state.selected_page == 'About':
         about_page()
-    elif selected == 'Contact':
+    elif st.session_state.selected_page == 'Contact':
         contact_page()
     else:
         home_page()
