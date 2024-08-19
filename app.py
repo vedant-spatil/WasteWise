@@ -11,6 +11,9 @@ from streamlit_option_menu import option_menu
 #Defining Assets
 hero="https://i.pinimg.com/564x/a0/17/33/a01733a27004208af24df829129c08ab.jpg"
 pfp="https://i.imgur.com/b25ZXQA.png"
+demo_img="https://i.imgur.com/OdaZJSm.png"
+high_confidence="https://i.imgur.com/HjpTdFB.png"
+low_confidence="https://i.imgur.com/5uU0r6c.png"
 trashNames = ['Biodegradable', 'Cardboard', 'Glass', 'Metal', 'Paper', 'Plastic']
 waterNames = ['Plastic','Bio','rov']
 trashModel = YOLO('Models/garbClass_25epochs.pt')
@@ -43,21 +46,17 @@ def main():
         return len(box)
 
     def draw_bounding_boxes(image, results):
-        #Function to draw bounding boxes on the image based on the YOLO output.
         for result in results:
             if result.boxes is not None:
                 for box in result.boxes:
-                    # Extract the bounding box coordinates
-                    x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())  # Convert to integer
-                    label = result.names[int(box.cls[0])]  # Get the label using the class index
-                    confidence = box.conf[0].item()  # Get the confidence score
-                    
-                    # Draw the bounding box
+                    x1, y1, x2, y2 = map(int, box.xyxy[0].tolist()) 
+                    label = result.names[int(box.cls[0])]  
+                    confidence = box.conf[0].item()
+
                     cv2.rectangle(image, (x1, y1), (x2, y2), color=(0, 255, 0), thickness=5)
                     
-                    # Draw the label and confidence
                     cv2.putText(image, f"{label} {confidence:.2f}", (x1, y1 - 10), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 5)
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
         return image
           
@@ -387,15 +386,17 @@ def main():
                     )
           
     def about_page():
+        #Styles
         st.markdown(
         """
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
         <style>
             .wrapper{
                 display: flex;
                 flex-direction: column;
                 justify-content: center;
                 margin-top: 20px;
-                margin-bottom: 70px;
+                margin-bottom: 50px;
                 padding-left: 10px;
                 padding-right: 10px;
             }
@@ -404,7 +405,6 @@ def main():
                 flex-direction: column;
                 justify-content: center;
                 margin-top: 20px;
-                margin-bottom: 70px;
                 padding-left: 10px;
                 padding-right: 10px;
                 align-items:center;
@@ -414,7 +414,12 @@ def main():
                 font-size:60px !important;
                 line-height:1.1;
                 padding-left:15px;
-                margin-bottom:40px;
+                margin-bottom:30px;
+            }
+            .sub-header-font{
+                font-size:40px !important;
+                line-height:1.1;
+                padding-left:15px;
             }
             .medium-font {
                 font-size:25px !important;
@@ -423,26 +428,91 @@ def main():
                 padding-bottom:0px;
                 padding-left:15px;
             }
+            .center-div{
+                width:94vw;
+                display: flex;
+                justify-content: center;
+            }
         </style>
         """,
         unsafe_allow_html=True,
         )
 
+        #Introduction Paragraph
         st.markdown(
             """
             <div class="wrapper">
                 <p class="big-font">Why is WasteWise essential for modern waste management?</p>
                 <p class="medium-font">WasteWise is a crucial tool for modern waste management, offering an innovative solution to effective waste segregation. By accurately detecting and classifying waste, it simplifies the separation of recyclables from general waste, improving collection efficiency. This benefits the environment, enhances worker safety by reducing manual sorting errors, and integrates seamlessly into household waste management. Additionally, WasteWise aids in underwater environments by detecting and segregating aquatic waste, supporting water pollution control and marine ecosystem preservation. Overall, WasteWise plays a vital role in advancing sustainable waste management.</p>
             </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        #Demo Section
+        st.markdown(
+            """
             <div class="wrapper-center">
                 <p class="big-font">See WasteWise in Action</p> 
             </div>
             """,
             unsafe_allow_html=True,
+        )
+        #Demo Section - Image
+        st.markdown(
+            f"""
+            <p class="sub-header-font"><i class="bi bi-caret-right-fill"></i> Using Image</p>
+            <div class="center-div">
+                <img style="margin-top:20px;" src={demo_img} width="85%">
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+        #Demo Section - Video
+        #Demo Section - Webcam
+
+        #Additional Settings
+        st.markdown(
+            """
+            <div class="wrapper-center">
+                <p class="big-font">Additional Settings</p> 
+            </div>
+            """,
+            unsafe_allow_html=True,
             )
 
+        #Additional Settings - Confidence section
+        st.markdown(
+            f"""
+            <p class="sub-header-font"><i class="bi bi-caret-right-fill"></i> Changing the Confidence</p>
+            <p class="medium-font" style="margin-left:50px;">
+                You can adjust the model's confidence level in the settings section found in the sidebar.
+            </p>
+            <p class="medium-font" style="margin-left:50px; margin-bottom:30px;">
+                Higher confidence increases the accuracy of object detection whereas Lower confidence allows the model to detect a larger number of objects.
+            </p>
+            <div style="width:94vw;
+                        display: flex;
+                        justify-content: flex-start; 
+                        margin-bottom:30px;
+                        margin-left:40px;
+                    ">
+                <img src={high_confidence} width="65%">
+            </div>
+            <div style="width:94vw;
+                        display: flex;
+                        justify-content: flex-end; 
+                        margin-bottom:30px;
+                        padding-right:105px;
+                    ">
+                <img src={low_confidence} width="65%">
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+        
     def contact_page():
-
+        #Styles
         st.markdown(
         """
         <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
