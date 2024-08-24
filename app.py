@@ -1,5 +1,7 @@
+import json
 import torch
 import numpy as np
+from matplotlib import pyplot as plt
 from time import time
 from PIL import Image 
 import tempfile
@@ -38,7 +40,19 @@ def main():
         if source.shape[2] == 4:
             source = cv2.cvtColor(source, cv2.COLOR_RGBA2RGB)
         prediction = model.predict(source=source, save=save_img, conf=confidence)
-        return prediction
+
+        detected_classes = []
+        detected_confidences = []
+
+        for result in prediction:
+            if result.boxes is not None:
+                for box in result.boxes:
+                    label = model.names[int(box.cls[0])]
+                    conf = box.conf[0].item()
+                    detected_classes.append(label)
+                    detected_confidences.append(conf)
+
+        return prediction, detected_classes, detected_confidences
 
     def count(results):
         for result in results:
@@ -125,7 +139,254 @@ def main():
 
         with col2:
             st.image(hero,width=400)
-    
+
+    def image(model, save_img, confidence):
+        uploaded_file = st.file_uploader("Upload an image...", type=["jpg", "jpeg", "png", "webp"])
+        if uploaded_file is not None:
+            image = Image.open(uploaded_file)
+            image = np.array(image)
+
+            result, det_classes, det_confidences = predictTrash(model, image, save_img, confidence)
+            det_obj_str = ", ".join(det_classes)  # Join list items with a comma
+            det_conf_str = ", ".join(f"{conf:.3f}" for conf in det_confidences)  # Format confidence values
+
+            image_with_boxes = draw_bounding_boxes(image, result)
+
+            st.image(image_with_boxes, use_column_width=True)
+
+            
+            # Columns of info
+            kpi1, kpi2, kpi3 = st.columns(3)
+
+            with kpi1:
+                n = count(result)
+                st.markdown(
+                    f"""
+                    <div class="red-div">
+                    <p class="big-font">Total Items</p>
+                    <p class="medium-font">{n}</p>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+            with kpi2:
+                st.markdown(
+                    f"""
+                    <div class="grey-div">
+                    <p class="big-font">Classes</p>
+                    <p id="item-list" class="medium-font">{det_obj_str}</p>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+            with kpi3:
+                st.markdown(
+                    f"""
+                    <div class="red-div">
+                    <p class="big-font">Confidence</p>
+                    <p class="medium-font">{det_conf_str}</p>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+    def video(model, save_img, confidence):
+
+        video_file_buffer = st.file_uploader('Upload a video', type=['mp4', 'mov', 'avi', 'asf', 'm4v'])
+
+        if video_file_buffer is not None:
+            # Save the uploaded video to a temporary file
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp_file:
+                tmp_file.write(video_file_buffer.read())
+                video_path = tmp_file.name
+
+            # Open the video file using OpenCV
+            cap = cv2.VideoCapture(video_path)
+
+            # Retrieve video properties
+            width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            fps = cap.get(cv2.CAP_PROP_FPS)
+
+            # Define the codec and create a VideoWriter object to save the processed video
+            fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # Use 'XVID' for .avi files
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as processed_file:
+                processed_video_path = processed_file.name
+
+            out = cv2.VideoWriter(processed_video_path, fourcc, fps, (width, height))
+
+            st.info("Processing video... This may take a while depending on the video length.")
+
+            # Process each frame of the video
+            frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            progress_bar = st.progress(0)
+            current_frame = 0
+
+            
+            
+            # Set up KPI placeholders using Streamlit's empty containers
+            kpi1_placeholder = st.empty()
+            kpi2_placeholder = st.empty()
+            kpi3_placeholder = st.empty()
+            kpi4_placeholder = st.empty()
+
+            # Initialize the KPI displays
+            kpi1_placeholder.markdown(
+                """
+                <div class="red-div">
+                    <p class="big-font">Total Items</p>
+                    <p class="medium-font">0</p>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+            kpi2_placeholder.markdown(
+                """
+                <div class="grey-div">
+                    <p class="big-font">Classes</p>
+                    <p class="medium-font">0</p>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+            kpi3_placeholder.markdown(
+                """
+                <div class="red-div">
+                    <p class="big-font">Confidence</p>
+                    <p class="medium-font">0.0</p>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+            kpi4_placeholder.markdown(
+                f"""
+                <div class="grey-div">
+                    <p class="big-font">Frame Rate</p>
+                    <p class="medium-font">{fps}</p>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+            while cap.isOpened():
+                ret, frame = cap.read()
+                if not ret:
+                    break
+
+                #Progress bar
+                current_frame += 1
+                progress = current_frame / frame_count
+                progress_bar.progress(min(progress, 1.0))
+
+
+                # Perform prediction using the YOLO model
+                results, det_obj, det_conf = predictTrash(model, frame, save_img, confidence)
+                number = count(results)
+                frame = draw_bounding_boxes(frame, results)
+
+                # Convert lists to strings for display
+                det_obj_str = ", ".join(det_obj)  # Join list items with a comma
+                det_conf_str = ", ".join(f"{conf:.2f}" for conf in det_conf)  # Format confidence values
+
+
+                # Write the processed frame to the output video
+                out.write(frame)
+
+                # Update KPI placeholders with the latest values
+                kpi1_placeholder.markdown(
+                    f"""
+                    <div class="red-div">
+                        <p class="big-font">Total Items</p>
+                        <p class="medium-font">{number}</p>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+                kpi2_placeholder.markdown(
+                    f"""
+                    <div class="grey-div">
+                        <p class="big-font">Classes</p>
+                        <p class="medium-font">{det_obj_str}</p>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+                kpi3_placeholder.markdown(
+                    f"""
+                    <div class="red-div">
+                        <p class="big-font">Confidence</p>
+                        <p class="medium-font">{det_conf_str}</p>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+
+            # Release resources
+            cap.release()
+            out.release()
+            cv2.destroyAllWindows()
+
+            # Display the processed video
+            st.success("Processing complete!")
+            st.video(processed_video_path)
+
+        else:
+            st.warning("Please upload a video file to proceed.")
+
+
+
+
+    def webcam(model, save_img, confidence):
+        # Columns of info
+        kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+
+        with kpi1:
+            st.markdown(
+                """
+                <div class="red-div">
+                <p class="big-font">Total Items</p>
+                <p class="medium-font">0</p>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+        with kpi2:
+            st.markdown(
+                """
+                <div class="grey-div">
+                <p class="big-font">Classes</p>
+                <p class="medium-font">0</p>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+        with kpi3:
+            st.markdown(
+                """
+                <div class="red-div">
+                <p class="big-font">Confidence</p>
+                <p class="medium-font">0</p>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+        
+        with kpi4:
+                st.markdown(
+                    """
+                    <div class="grey-div">
+                    <p class="big-font">Frame Rate</p>
+                    <p class="medium-font">0</p>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
     def test_page():
         
         #Sidebar-------------------------------------------------------------
@@ -151,8 +412,10 @@ def main():
                 unsafe_allow_html = True,
             )
             
+            #Settings - Confidence 
             confidence = st.slider('Confidence', min_value=0.0, max_value=1.0, value=0.25)
 
+            #Settings - Checkboxes
             save_img = st.checkbox('Save Output')
             enable_GPU = st.checkbox('Enable GPU')
             custom_classes = st.checkbox('Use Custom Classes')
@@ -167,30 +430,6 @@ def main():
                 assigned_class = st.multiselect('Select The Custom Classes', list(names), default="Plastic")
                 for each in assigned_class:
                     assigned_class_id.append(names.index(each))
-            
-            #start = st.button('Test Model')
-            
-        # video_file_buffer = st.sidebar.file_uploader('Upload a video', type= ['mp4', 'mov', 'avi', 'asf', 'm4v'])
-        # DEMO_VIDEO='D:/WasteWise/Assets/video.mp4'
-        # tffile = tempfile.NamedTemporaryFile(suffix='.mp4', delete=False)
-
-        # if not video_file_buffer:
-        #     vid = cv2.VideoCapture(DEMO_VIDEO)
-        #     tffile.name=DEMO_VIDEO
-        #     dem_vid=open(tffile, 'rb')
-        #     demo_bytes = dem_vid.read()
-
-        #     st.sidebar.text('Input Video')
-        #     st.sidebar.video(demo_bytes)
-        # else:
-        #     tffile.write(video_file_buffer.read())
-        #     dem_vid = open(tffile.name, 'rb')
-        #     demo_bytes = dem_vid.read()
-
-        #     st.sidebar.text('Input Video')
-        #     st.sidebar.video(demo_bytes)
-        # print(tffile.name)
-        #stframe= st.empty()
 
 
         #Main Page-----------------------------------------------------------
@@ -201,6 +440,8 @@ def main():
         assigned_source = st.selectbox('Select The Source', list(sources))
 
         #Upload file
+
+        #Upload file - Styles
         st.markdown(
             """
             <style>
@@ -213,7 +454,7 @@ def main():
                     justify-content:center;
                     color: #ECECEC;
                     border-radius:25px;
-                    padding: 10px;
+                    padding: 20px;
                 }
                 .grey-div{
                     background-color: #D6D6D6;
@@ -223,7 +464,7 @@ def main():
                     align-items:center;
                     justify-content:center;
                     border-radius:25px;
-                    padding: 10px;
+                    padding: 20px;
                 }
                 .big-font {
                     font-size:40px !important;
@@ -231,159 +472,24 @@ def main():
                 }
                 .medium-font {
                     font-size:25px !important;
+                    text-align:center;
                 }
             </style>
             """,
             unsafe_allow_html=True
         )
 
-        #Image
+        #Upload File - Image
         if assigned_source == "Image":
-            uploaded_file = st.file_uploader("Upload an image...", type=["jpg", "jpeg", "png", "webp"])
-            if uploaded_file is not None:
-                image = Image.open(uploaded_file)
-                image = np.array(image)
-
-                result = predictTrash(model, image, save_img, confidence)
-
-                image_with_boxes = draw_bounding_boxes(image, result)
-
-                st.image(image_with_boxes, caption='Processed Image', use_column_width=True)
-
-                # Columns of info
-                kpi1, kpi2, kpi3 = st.columns(3)
-
-                with kpi1:
-                    n = count(result)
-                    st.markdown(
-                        f"""
-                        <div class="red-div">
-                        <p class="big-font">Total Items</p>
-                        <p class="medium-font">{n}</p>
-                        </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
-
-                with kpi2:
-                    st.markdown(
-                        """
-                        <div class="grey-div">
-                        <p class="big-font">Classes</p>
-                        <p class="medium-font">0</p>
-                        </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
-
-                with kpi3:
-                    st.markdown(
-                        """
-                        <div class="red-div">
-                        <p class="big-font">Confidence</p>
-                        <p class="medium-font">0</p>
-                        </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
+            image(model, save_img, confidence)
                 
-        #Video     
+        #Upload File - Video     
         elif assigned_source == "Video":
-                # Columns of info
-                kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+            video(model, save_img, confidence)
 
-                with kpi1:
-                    st.markdown(
-                        """
-                        <div class="red-div">
-                        <p class="big-font">Total Items</p>
-                        <p class="medium-font">0</p>
-                        </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
-
-                with kpi2:
-                    st.markdown(
-                        """
-                        <div class="grey-div">
-                        <p class="big-font">Classes</p>
-                        <p class="medium-font">0</p>
-                        </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
-
-                with kpi3:
-                    st.markdown(
-                        """
-                        <div class="red-div">
-                        <p class="big-font">Confidence</p>
-                        <p class="medium-font">0</p>
-                        </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
-
-                with kpi4:
-                    st.markdown(
-                        """
-                        <div class="grey-div">
-                        <p class="big-font">Frame Rate</p>
-                        <p class="medium-font">0</p>
-                        </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
-
-        #Webcam
+        #Upload File - Webcam
         elif assigned_source == "Webcam":
-                # Columns of info
-                kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-
-                with kpi1:
-                    st.markdown(
-                        """
-                        <div class="red-div">
-                        <p class="big-font">Total Items</p>
-                        <p class="medium-font">0</p>
-                        </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
-
-                with kpi2:
-                    st.markdown(
-                        """
-                        <div class="grey-div">
-                        <p class="big-font">Classes</p>
-                        <p class="medium-font">0</p>
-                        </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
-
-                with kpi3:
-                    st.markdown(
-                        """
-                        <div class="red-div">
-                        <p class="big-font">Confidence</p>
-                        <p class="medium-font">0</p>
-                        </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
-
-                with kpi4:
-                    st.markdown(
-                        """
-                        <div class="grey-div">
-                        <p class="big-font">Frame Rate</p>
-                        <p class="medium-font">0</p>
-                        </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
+            webcam(model, save_img, confidence)            
           
     def about_page():
         #Styles
@@ -495,7 +601,8 @@ def main():
                         display: flex;
                         justify-content: flex-start; 
                         margin-bottom:30px;
-                        margin-left:40px;
+                        padding-left:20px;
+                        padding-right:20px;
                     ">
                 <img src={high_confidence} width="65%">
             </div>
@@ -503,7 +610,8 @@ def main():
                         display: flex;
                         justify-content: flex-end; 
                         margin-bottom:30px;
-                        padding-right:105px;
+                        margin-right:30px;
+                        padding-right:40px;
                     ">
                 <img src={low_confidence} width="65%">
             </div>
@@ -645,6 +753,8 @@ def main():
         page_icon=":trash-fill:",
         layout="wide",
     )
+
+    hide_hamburger_menu()
 
     #Navbar
     if 'selected_page' not in st.session_state:
