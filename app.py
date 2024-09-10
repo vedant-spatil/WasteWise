@@ -36,6 +36,15 @@ def main():
     #     self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
     #     print("Using Device: ", self.device)
 
+    def hide_hamburger_menu():
+        hide_streamlit_style = """
+            <style>
+            #MainMenu {visibility: hidden;}
+            footer {visibility: hidden;}
+            </style>
+            """
+        st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+
     def predictTrash(model, source, save_img, confidence):
         if source.shape[2] == 4:
             source = cv2.cvtColor(source, cv2.COLOR_RGBA2RGB)
@@ -73,82 +82,24 @@ def main():
                     cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
         return image
-          
-    def home_page():
-        
-        st.markdown(
-        """
-        <style>
-            .big-font {
-                font-size:60px !important;
-                line-height:1.3;
-                padding-left:15px;
-            }
-            .medium-font {
-                font-size:25px !important;
-                color:grey;
-                line-height:1.3;
-                padding-bottom:0px;
-                padding-left:15px;
-            }
-            .buttons-div{
-                display:flex;
-                align-items:center;
-                # justify-content:center;
-                justify-content:flex-start;
-                gap:1vw;
-            }
-            .but {
-                margin-left:15px;
-                text-align:center;
-                border-radius:5px;
-                padding:5px 10px 5px 10px;
-                border: solid 1px #FF4B4B;
-                color:#ECECEC;
-                background-color:#FF4B4B;
-            }
-            .but:active {
-                border: solid 1px #FF4B4B;
-                background-color: white;
-                color:#FF4B4B;
-            }
-        </style>
-        """,
-        unsafe_allow_html=True,
-        )
 
-        col1, col2 = st.columns([2,1],gap="medium",vertical_alignment="center")
-        with col1:
-            st.markdown('<p class="big-font">Empowering Waste Management with <b>Waste Wise</b></p>', unsafe_allow_html=True)
-            st.markdown('<p class="medium-font">Advanced Vision AI for Accurate Trash Detection and Streamlined Waste Management, ensuring a cleaner and greener future.</p>', unsafe_allow_html=True)
-
-            # btn1=st.button(label="Get Started")
-            st.markdown(
-                """
-                <div class="buttons-div">
-                <button class="but" >Get Started</button>
-                <button class="but" >Learn More</button>
-                </div>
-                """, 
-                unsafe_allow_html=True
-                )
-            # if st.button('Test', key='test_button', on_click=lambda: navigate_to('Test')):
-            #     pass
-            # if st.button('About', key='about_button', on_click=lambda: navigate_to('About')):
-            #     pass
-
-        with col2:
-            st.image(hero,width=400)
+    def add_unique(final_list, new_elements):
+        final_set = set(final_list)
+        updated_set = final_set.union(new_elements)
+        return list(updated_set)
 
     def image(model, save_img, confidence):
+        #Uploading and Processing Image
         uploaded_file = st.file_uploader("Upload an image...", type=["jpg", "jpeg", "png", "webp"])
         if uploaded_file is not None:
             image = Image.open(uploaded_file)
             image = np.array(image)
 
             result, det_classes, det_confidences = predictTrash(model, image, save_img, confidence)
-            det_obj_str = ", ".join(det_classes)  # Join list items with a comma
-            det_conf_str = ", ".join(f"{conf:.3f}" for conf in det_confidences)  # Format confidence values
+
+            #Coverting values into strings
+            det_obj_str = ", ".join(det_classes) 
+            det_conf_str = ", ".join(f"{conf:.3f}" for conf in det_confidences)
 
             image_with_boxes = draw_bounding_boxes(image, result)
 
@@ -193,19 +144,84 @@ def main():
                 )
 
     def video(model, save_img, confidence):
+        #Styles
+        st.markdown(
+            """
+            <style>
+                .vid-red-div{
+                    background-color: #FF4B4B;
+                    min-height: 30vh;
+                    width: 271px;
+                    display:flex;
+                    flex-direction: column;
+                    align-items:center;
+                    justify-content:center;
+                    color: #ECECEC;
+                    border-radius:25px;
+                    padding: 20px;
+                }
+                .vid-grey-div{
+                    background-color: #D6D6D6;
+                    min-height: 30vh;
+                    width: 271px;
+                    display:flex;
+                    flex-direction: column;
+                    align-items:center;
+                    justify-content:center;
+                    border-radius:25px;
+                    padding: 20px;
+                }
+                .big-font {
+                    font-size:40px !important;
+                    font-weight:bold;
+                }
+                .medium-font {
+                    font-size:25px !important;
+                    text-align:center;
+                }
 
+                /* Media Queries */
+                
+                @media (max-width: 480px) {
+                    .vid-red-div, .vid-grey-div {
+                        width: 150px;
+                        padding: 10px;
+                    }
+                    .big-font {
+                        font-size: 25px !important;
+                    }
+                    .medium-font {
+                        font-size: 16px !important;
+                    }
+                }
+                
+                @media (max-width: 768px) {
+                    .vid-red-div, .vid-grey-div {
+                        width: 200px;
+                        padding: 15px;
+                    }
+                    .big-font {
+                        font-size: 30px !important;
+                    }
+                    .medium-font {
+                        font-size: 20px !important;
+                    }
+                }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
+
+        # Uploading and Processing of Video
         video_file_buffer = st.file_uploader('Upload a video', type=['mp4', 'mov', 'avi', 'asf', 'm4v'])
 
         if video_file_buffer is not None:
-            # Save the uploaded video to a temporary file
             with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp_file:
                 tmp_file.write(video_file_buffer.read())
                 video_path = tmp_file.name
 
-            # Open the video file using OpenCV
             cap = cv2.VideoCapture(video_path)
 
-            # Retrieve video properties
             width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
             fps = cap.get(cv2.CAP_PROP_FPS)
@@ -232,10 +248,14 @@ def main():
             kpi3_placeholder = st.empty()
             kpi4_placeholder = st.empty()
 
+            #Final elements
+            fin_obj_list=[]
+            fin_conf_list=[]
+            
             # Initialize the KPI displays
             kpi1_placeholder.markdown(
                 """
-                <div class="red-div">
+                <div class="vid-red-div">
                     <p class="big-font">Total Items</p>
                     <p class="medium-font">0</p>
                 </div>
@@ -244,7 +264,7 @@ def main():
             )
             kpi2_placeholder.markdown(
                 """
-                <div class="grey-div">
+                <div class="vid-grey-div">
                     <p class="big-font">Classes</p>
                     <p class="medium-font">0</p>
                 </div>
@@ -253,7 +273,7 @@ def main():
             )
             kpi3_placeholder.markdown(
                 """
-                <div class="red-div">
+                <div class="vid-red-div">
                     <p class="big-font">Confidence</p>
                     <p class="medium-font">0.0</p>
                 </div>
@@ -262,7 +282,7 @@ def main():
             )
             kpi4_placeholder.markdown(
                 f"""
-                <div class="grey-div">
+                <div class="vid-grey-div">
                     <p class="big-font">Frame Rate</p>
                     <p class="medium-font">{fps}</p>
                 </div>
@@ -286,6 +306,10 @@ def main():
                 number = count(results)
                 frame = draw_bounding_boxes(frame, results)
 
+                #Code for Final
+                fin_obj_list = add_unique(fin_obj_list, det_obj)
+                fin_obj_list = add_unique(fin_conf_list, det_conf)
+
                 # Convert lists to strings for display
                 det_obj_str = ", ".join(det_obj)  # Join list items with a comma
                 det_conf_str = ", ".join(f"{conf:.2f}" for conf in det_conf)  # Format confidence values
@@ -297,7 +321,7 @@ def main():
                 # Update KPI placeholders with the latest values
                 kpi1_placeholder.markdown(
                     f"""
-                    <div class="red-div">
+                    <div class="vid-red-div">
                         <p class="big-font">Total Items</p>
                         <p class="medium-font">{number}</p>
                     </div>
@@ -306,7 +330,7 @@ def main():
                 )
                 kpi2_placeholder.markdown(
                     f"""
-                    <div class="grey-div">
+                    <div class="vid-grey-div">
                         <p class="big-font">Classes</p>
                         <p class="medium-font">{det_obj_str}</p>
                     </div>
@@ -315,14 +339,13 @@ def main():
                 )
                 kpi3_placeholder.markdown(
                     f"""
-                    <div class="red-div">
+                    <div class="vid-red-div">
                         <p class="big-font">Confidence</p>
                         <p class="medium-font">{det_conf_str}</p>
                     </div>
                     """,
                     unsafe_allow_html=True
                 )
-
 
             # Release resources
             cap.release()
@@ -333,11 +356,59 @@ def main():
             st.success("Processing complete!")
             st.video(processed_video_path)
 
+            #Final outputs
+
+            fin_obj_str = ", ".join(str(obj) for obj in fin_obj_list)
+            fin_conf_str = ", ".join(str(conf) for conf in fin_conf_list)
+
+            kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+            
+            with kpi1:
+                st.markdown(
+                    f"""
+                    <div class="red-div">
+                    <p class="big-font">Total Items</p>
+                    <p class="medium-font">{len(fin_obj_list)}</p>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+            with kpi2:
+                st.markdown(
+                    f"""
+                    <div class="grey-div">
+                    <p class="big-font">Classes</p>
+                    <p class="medium-font">{fin_obj_list}</p>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+            with kpi3:
+                st.markdown(
+                    f"""
+                    <div class="red-div">
+                    <p class="big-font">Confidence</p>
+                    <p class="medium-font">{fin_conf_list}/p>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+            
+            with kpi4:
+                    st.markdown(
+                        f"""
+                        <div class="grey-div">
+                        <p class="big-font">Frame Rate</p>
+                        <p class="medium-font">{fps}</p>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+
         else:
             st.warning("Please upload a video file to proceed.")
-
-
-
 
     def webcam(model, save_img, confidence):
         # Columns of info
@@ -386,6 +457,110 @@ def main():
                     """,
                     unsafe_allow_html=True
                 )
+
+    def home_page():
+        
+        st.markdown(
+        """
+        <style>
+            .big-font {
+                font-size:60px !important;
+                line-height:1.3;
+                padding-left:15px;
+            }
+            .medium-font {
+                font-size:25px !important;
+                color:grey;
+                line-height:1.3;
+                padding-bottom:0px;
+                padding-left:15px;
+            }
+            .buttons-div{
+                display:flex;
+                align-items:center;
+                # justify-content:center;
+                justify-content:flex-start;
+                gap:1vw;
+            }
+            .but {
+                margin-left:15px;
+                text-align:center;
+                border-radius:5px;
+                padding:5px 10px 5px 10px;
+                border: solid 1px #FF4B4B;
+                color:#ECECEC;
+                background-color:#FF4B4B;
+            }
+            .but:active {
+                border: solid 1px #FF4B4B;
+                background-color: white;
+                color:#FF4B4B;
+            }
+
+            # Media Queries
+
+            @media (max-width: 480px) {
+                .big-font {
+                    font-size: 25px !important; /* Further reduced font size for mobile */
+                    padding-left: 5px;
+                }
+                .medium-font {
+                    font-size: 10px !important; /* Further reduced font size for mobile */
+                    padding-left: 5px;
+                }
+                .but {
+                    padding: 3px 6px; /* Smaller padding for mobile devices */
+                }
+                .buttons-div {
+                    flex-direction: column; /* Stack buttons vertically on small screens */
+                    align-items: flex-start; /* Align items to the start */
+                    gap: 10px; /* Space between buttons */
+                }
+            }
+
+            @media (max-width: 768px) {
+                .big-font {
+                    font-size: 45px !important; /* Smaller font size for tablets */
+                    padding-left: 10px;
+                }
+                .medium-font {
+                    font-size: 20px !important; /* Adjusted font size for tablets */
+                    padding-left: 10px;
+                }
+                .but {
+                    padding: 4px 8px; /* Adjusted padding for tablets */
+                }
+                .buttons-div {
+                    gap: 2vw; /* Adjust gap between buttons for smaller screens */
+                }
+            }
+        </style>
+        """,
+        unsafe_allow_html=True,
+        )
+
+        col1, col2 = st.columns([2,1],gap="medium",vertical_alignment="center")
+        with col1:
+            st.markdown('<p class="big-font">Empowering Waste Management with <b>Waste Wise</b></p>', unsafe_allow_html=True)
+            st.markdown('<p class="medium-font">Advanced Vision AI for Accurate Trash Detection and Streamlined Waste Management, ensuring a cleaner and greener future.</p>', unsafe_allow_html=True)
+
+            # btn1=st.button(label="Get Started")
+            st.markdown(
+                """
+                <div class="buttons-div">
+                <button class="but" >Get Started</button>
+                <button class="but" >Learn More</button>
+                </div>
+                """, 
+                unsafe_allow_html=True
+                )
+            # if st.button('Test', key='test_button', on_click=lambda: navigate_to('Test')):
+            #     pass
+            # if st.button('About', key='about_button', on_click=lambda: navigate_to('About')):
+            #     pass
+
+        with col2:
+            st.image(hero,width=400)
 
     def test_page():
         
@@ -474,10 +649,26 @@ def main():
                     font-size:25px !important;
                     text-align:center;
                 }
+
+                @media (max-width: 480px) {
+                    .red-div, .grey-div {
+                        min-height: 20vh; 
+                        padding: 10px; 
+                        border-radius: 15px; 
+                    }
+                }
+
+                @media (max-width: 768px) {
+                    .red-div, .grey-div {
+                        min-height: 25vh;
+                        padding: 15px; 
+                    }
+                }
             </style>
             """,
             unsafe_allow_html=True
         )
+        
 
         #Upload File - Image
         if assigned_source == "Image":
@@ -538,6 +729,42 @@ def main():
                 width:94vw;
                 display: flex;
                 justify-content: center;
+            }
+            @media (max-width: 480px) {
+                .big-font {
+                    font-size: 35px !important;
+                    padding-left: 5px;
+                    margin-bottom: 15px;
+                }
+                .sub-header-font {
+                    font-size: 25px !important;
+                    padding-left: 5px;
+                }
+                .medium-font {
+                    font-size: 18px !important;
+                    padding-left: 5px;
+                }
+                .center-div {
+                    width: 100vw;
+                }
+            }
+            @media (max-width: 768px) {
+                .big-font {
+                    font-size: 45px !important;
+                    padding-left: 10px;
+                    margin-bottom: 20px;
+                }
+                .sub-header-font {
+                    font-size: 30px !important;
+                    padding-left: 10px;
+                }
+                .medium-font {
+                    font-size: 20px !important;
+                    padding-left: 10px;
+                }
+                .center-div {
+                    width: 98vw;
+                }
             }
         </style>
         """,
@@ -667,6 +894,44 @@ def main():
                 background-color: white;
                 color:#FF4B4B;
             }
+
+            @media (max-width: 768px) { 
+                .big-font {
+                    font-size: 45px !important;
+                    padding-left: 10px;
+                    margin-bottom: 30px;
+                }
+                .medium-font {
+                    font-size: 20px !important;
+                    padding-left: 10px;
+                }
+                .buttons-div {
+                    gap: 2vw;
+                }
+                .but {
+                    padding: 4px 8px;
+                    font-size: 14px;
+                }
+            }
+
+            @media (max-width: 480px) {
+                .big-font {
+                    font-size: 35px !important;
+                    margin-bottom: 15px;
+                }
+                .medium-font {
+                    font-size: 16px !important;
+                }
+                .buttons-div {
+                    flex-direction: column;
+                    align-items: flex-start;
+                    gap: 2vw;
+                }
+                .but {
+                    padding: 2px 5px;
+                    font-size: 12px;
+                }
+            }
         </style>
         """,
         unsafe_allow_html=True,
@@ -734,15 +999,6 @@ def main():
                         """,unsafe_allow_html=True)
         with col2:
             st.image(pfp)
-    
-    def hide_hamburger_menu():
-        hide_streamlit_style = """
-            <style>
-            #MainMenu {visibility: hidden;}
-            footer {visibility: hidden;}
-            </style>
-            """
-        st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 
     ######      MAIN INFO      ######
