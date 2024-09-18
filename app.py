@@ -543,21 +543,9 @@ def main():
         with col1:
             st.markdown('<p class="big-font">Empowering Waste Management with <b>Waste Wise</b></p>', unsafe_allow_html=True)
             st.markdown('<p class="medium-font">Advanced Vision AI for Accurate Trash Detection and Streamlined Waste Management, ensuring a cleaner and greener future.</p>', unsafe_allow_html=True)
-
-            # btn1=st.button(label="Get Started")
-            st.markdown(
-                """
-                <div class="buttons-div">
-                <button class="but" >Get Started</button>
-                <button class="but" >Learn More</button>
-                </div>
-                """, 
-                unsafe_allow_html=True
-                )
-            # if st.button('Test', key='test_button', on_click=lambda: navigate_to('Test')):
-            #     pass
-            # if st.button('About', key='about_button', on_click=lambda: navigate_to('About')):
-            #     pass
+            st.markdown("")
+            st.markdown("")
+            st.markdown("")
 
         with col2:
             st.image(hero,width=400)
