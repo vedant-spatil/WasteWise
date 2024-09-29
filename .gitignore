@@ -166,3 +166,5 @@ cython_debug/
 GARBAGE-CLASSIFICATION-3-2
 runs
 .streamlit
+.streamlit/config.toml
+train.ipynb
