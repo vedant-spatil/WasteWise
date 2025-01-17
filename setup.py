@@ -17,7 +17,7 @@ def get_requirements(file_path:str)->List[str]:
 
 setup(
     name='WasteWise',
-    version='0.0.1',
+    version='1.0',
     author='Vedant',
     author_email='vedantsudhirpatil@gmail.com',
     packages=find_packages(),

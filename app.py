@@ -1,5 +1,3 @@
-import json
-import torch
 import numpy as np
 from matplotlib import pyplot as plt
 from time import time
@@ -9,6 +7,9 @@ import cv2
 import streamlit as st
 from ultralytics import YOLO
 from streamlit_option_menu import option_menu
+import os
+from streamlit_webrtc import webrtc_streamer
+import av
 
 #Defining Assets
 hero="https://i.pinimg.com/564x/a0/17/33/a01733a27004208af24df829129c08ab.jpg"
@@ -20,7 +21,7 @@ trashNames = ['Biodegradable', 'Cardboard', 'Glass', 'Metal', 'Paper', 'Plastic'
 waterNames = ['Plastic','Bio','rov']
 trashModel = YOLO('Models/garbClass_25epochs.pt')
 waterModel = YOLO('Models/waterTrash_25epochs.pt')
-sources=['Image','Video','Webcam']
+sources=['Image','Webcam']
 model_list = {
     'Garbage Detection': trashModel,
     'Water Trash Detection': waterModel
@@ -28,13 +29,6 @@ model_list = {
 
 
 def main():
-
-    #Functions
-
-    # def __init__(self, capture_index):
-    #     self.capture_index = capture_index
-    #     self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    #     print("Using Device: ", self.device)
 
     def hide_hamburger_menu():
         hide_streamlit_style = """
@@ -62,6 +56,26 @@ def main():
                     detected_confidences.append(conf)
 
         return prediction, detected_classes, detected_confidences
+    
+    def webcam_detect(frame, model, confidence):
+        img = frame.to_ndarray(format="bgr24")
+        results = model.predict(img, conf=confidence, stream=False)
+        annotated_frame = results[0].plot() if results else img
+        detected_classes = []
+        detected_confidences = []
+
+        if results and results[0].boxes:
+            for box in results[0].boxes:
+                cls = int(box.cls[0])
+                conf = float(box.conf[0])
+                label = model.names[cls]
+                detected_classes.append(label)
+                detected_confidences.append(conf)
+
+        if detected_classes:
+            print(f"Detected: {detected_classes} with confidences: {detected_confidences}")
+
+        return av.VideoFrame.from_ndarray(annotated_frame, format="bgr24")
 
     def count(results):
         for result in results:
@@ -72,21 +86,12 @@ def main():
         for result in results:
             if result.boxes is not None:
                 for box in result.boxes:
-                    x1, y1, x2, y2 = map(int, box.xyxy[0].tolist()) 
-                    label = result.names[int(box.cls[0])]  
+                    x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
+                    label = result.names[int(box.cls[0])]
                     confidence = box.conf[0].item()
-
                     cv2.rectangle(image, (x1, y1), (x2, y2), color=(0, 255, 0), thickness=5)
-                    
-                    cv2.putText(image, f"{label} {confidence:.2f}", (x1, y1 - 10), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-
+                    cv2.putText(image, f"{label} {confidence:.2f}", (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
         return image
-
-    def add_unique(final_list, new_elements):
-        final_set = set(final_list)
-        updated_set = final_set.union(new_elements)
-        return list(updated_set)
 
     def image(model, save_img, confidence):
         #Uploading and Processing Image
@@ -143,320 +148,12 @@ def main():
                     unsafe_allow_html=True
                 )
 
-    def video(model, save_img, confidence):
-        #Styles
-        st.markdown(
-            """
-            <style>
-                .vid-red-div{
-                    background-color: #FF4B4B;
-                    min-height: 30vh;
-                    width: 271px;
-                    display:flex;
-                    flex-direction: column;
-                    align-items:center;
-                    justify-content:center;
-                    color: #ECECEC;
-                    border-radius:25px;
-                    padding: 20px;
-                }
-                .vid-grey-div{
-                    background-color: #D6D6D6;
-                    min-height: 30vh;
-                    width: 271px;
-                    display:flex;
-                    flex-direction: column;
-                    align-items:center;
-                    justify-content:center;
-                    border-radius:25px;
-                    padding: 20px;
-                }
-                .big-font {
-                    font-size:40px !important;
-                    font-weight:bold;
-                }
-                .medium-font {
-                    font-size:25px !important;
-                    text-align:center;
-                }
-
-                /* Media Queries */
-                
-                @media (max-width: 480px) {
-                    .vid-red-div, .vid-grey-div {
-                        width: 150px;
-                        padding: 10px;
-                    }
-                    .big-font {
-                        font-size: 25px !important;
-                    }
-                    .medium-font {
-                        font-size: 16px !important;
-                    }
-                }
-                
-                @media (max-width: 768px) {
-                    .vid-red-div, .vid-grey-div {
-                        width: 200px;
-                        padding: 15px;
-                    }
-                    .big-font {
-                        font-size: 30px !important;
-                    }
-                    .medium-font {
-                        font-size: 20px !important;
-                    }
-                }
-            </style>
-            """,
-            unsafe_allow_html=True
-        )
-
-        # Uploading and Processing of Video
-        video_file_buffer = st.file_uploader('Upload a video', type=['mp4', 'mov', 'avi', 'asf', 'm4v'])
-
-        if video_file_buffer is not None:
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp_file:
-                tmp_file.write(video_file_buffer.read())
-                video_path = tmp_file.name
-
-            cap = cv2.VideoCapture(video_path)
-
-            width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-            height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-            fps = cap.get(cv2.CAP_PROP_FPS)
-
-            # Define the codec and create a VideoWriter object to save the processed video
-            fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # Use 'XVID' for .avi files
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as processed_file:
-                processed_video_path = processed_file.name
-
-            out = cv2.VideoWriter(processed_video_path, fourcc, fps, (width, height))
-
-            st.info("Processing video... This may take a while depending on the video length.")
-
-            # Process each frame of the video
-            frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-            progress_bar = st.progress(0)
-            current_frame = 0
-
-            
-            
-            # Set up KPI placeholders using Streamlit's empty containers
-            kpi1_placeholder = st.empty()
-            kpi2_placeholder = st.empty()
-            kpi3_placeholder = st.empty()
-            kpi4_placeholder = st.empty()
-
-            #Final elements
-            fin_obj_list=[]
-            fin_conf_list=[]
-            
-            # Initialize the KPI displays
-            kpi1_placeholder.markdown(
-                """
-                <div class="vid-red-div">
-                    <p class="big-font">Total Items</p>
-                    <p class="medium-font">0</p>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-            kpi2_placeholder.markdown(
-                """
-                <div class="vid-grey-div">
-                    <p class="big-font">Classes</p>
-                    <p class="medium-font">0</p>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-            kpi3_placeholder.markdown(
-                """
-                <div class="vid-red-div">
-                    <p class="big-font">Confidence</p>
-                    <p class="medium-font">0.0</p>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-            kpi4_placeholder.markdown(
-                f"""
-                <div class="vid-grey-div">
-                    <p class="big-font">Frame Rate</p>
-                    <p class="medium-font">{fps}</p>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-            while cap.isOpened():
-                ret, frame = cap.read()
-                if not ret:
-                    break
-
-                #Progress bar
-                current_frame += 1
-                progress = current_frame / frame_count
-                progress_bar.progress(min(progress, 1.0))
-
-
-                # Perform prediction using the YOLO model
-                results, det_obj, det_conf = predictTrash(model, frame, save_img, confidence)
-                number = count(results)
-                frame = draw_bounding_boxes(frame, results)
-
-                #Code for Final
-                fin_obj_list = add_unique(fin_obj_list, det_obj)
-                fin_obj_list = add_unique(fin_conf_list, det_conf)
-
-                # Convert lists to strings for display
-                det_obj_str = ", ".join(det_obj)  # Join list items with a comma
-                det_conf_str = ", ".join(f"{conf:.2f}" for conf in det_conf)  # Format confidence values
-
-
-                # Write the processed frame to the output video
-                out.write(frame)
-
-                # Update KPI placeholders with the latest values
-                kpi1_placeholder.markdown(
-                    f"""
-                    <div class="vid-red-div">
-                        <p class="big-font">Total Items</p>
-                        <p class="medium-font">{number}</p>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
-                kpi2_placeholder.markdown(
-                    f"""
-                    <div class="vid-grey-div">
-                        <p class="big-font">Classes</p>
-                        <p class="medium-font">{det_obj_str}</p>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
-                kpi3_placeholder.markdown(
-                    f"""
-                    <div class="vid-red-div">
-                        <p class="big-font">Confidence</p>
-                        <p class="medium-font">{det_conf_str}</p>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
-
-            # Release resources
-            cap.release()
-            out.release()
-            cv2.destroyAllWindows()
-
-            # Display the processed video
-            st.success("Processing complete!")
-            st.video(processed_video_path)
-
-            #Final outputs
-
-            fin_obj_str = ", ".join(str(obj) for obj in fin_obj_list)
-            fin_conf_str = ", ".join(str(conf) for conf in fin_conf_list)
-
-            kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-            
-            with kpi1:
-                st.markdown(
-                    f"""
-                    <div class="red-div">
-                    <p class="big-font">Total Items</p>
-                    <p class="medium-font">{len(fin_obj_list)}</p>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
-
-            with kpi2:
-                st.markdown(
-                    f"""
-                    <div class="grey-div">
-                    <p class="big-font">Classes</p>
-                    <p class="medium-font">{fin_obj_list}</p>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
-
-            with kpi3:
-                st.markdown(
-                    f"""
-                    <div class="red-div">
-                    <p class="big-font">Confidence</p>
-                    <p class="medium-font">{fin_conf_list}/p>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
-            
-            with kpi4:
-                    st.markdown(
-                        f"""
-                        <div class="grey-div">
-                        <p class="big-font">Frame Rate</p>
-                        <p class="medium-font">{fps}</p>
-                        </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
-
-        else:
-            st.warning("Please upload a video file to proceed.")
-
     def webcam(model, save_img, confidence):
-        # Columns of info
-        kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-
-        with kpi1:
-            st.markdown(
-                """
-                <div class="red-div">
-                <p class="big-font">Total Items</p>
-                <p class="medium-font">0</p>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-        with kpi2:
-            st.markdown(
-                """
-                <div class="grey-div">
-                <p class="big-font">Classes</p>
-                <p class="medium-font">0</p>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-        with kpi3:
-            st.markdown(
-                """
-                <div class="red-div">
-                <p class="big-font">Confidence</p>
-                <p class="medium-font">0</p>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-        
-        with kpi4:
-                st.markdown(
-                    """
-                    <div class="grey-div">
-                    <p class="big-font">Frame Rate</p>
-                    <p class="medium-font">0</p>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
+        webrtc_streamer(
+            key="yolo",
+            video_frame_callback=lambda frame: webcam_detect(frame, model, confidence),
+            media_stream_constraints={"video": True, "audio": False},
+        )
 
     def home_page():
         
@@ -662,10 +359,6 @@ def main():
         if assigned_source == "Image":
             image(model, save_img, confidence)
                 
-        #Upload File - Video     
-        elif assigned_source == "Video":
-            video(model, save_img, confidence)
-
         #Upload File - Webcam
         elif assigned_source == "Webcam":
             webcam(model, save_img, confidence)            
