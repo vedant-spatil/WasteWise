@@ -108,7 +108,7 @@ def main():
 
             image_with_boxes = draw_bounding_boxes(image, result)
 
-            st.image(image_with_boxes, use_column_width=True)
+            st.image(image_with_boxes, use_container_width=True)
 
             
             # Columns of info
@@ -148,7 +148,7 @@ def main():
                     unsafe_allow_html=True
                 )
 
-    def webcam(model, save_img, confidence):
+    def webcam(model, confidence):
         webrtc_streamer(
             key="yolo",
             video_frame_callback=lambda frame: webcam_detect(frame, model, confidence),
@@ -277,7 +277,6 @@ def main():
 
             #Settings - Checkboxes
             save_img = st.checkbox('Save Output')
-            enable_GPU = st.checkbox('Enable GPU')
             custom_classes = st.checkbox('Use Custom Classes')
 
             if assigned_model_display_name == "Water Trash Detection":
@@ -361,7 +360,7 @@ def main():
                 
         #Upload File - Webcam
         elif assigned_source == "Webcam":
-            webcam(model, save_img, confidence)            
+            webcam(model, confidence)            
           
     def about_page():
         #Styles
@@ -475,7 +474,6 @@ def main():
         #Demo Section - Image
         st.markdown(
             f"""
-            <p class="sub-header-font"><i class="bi bi-caret-right-fill"></i> Using Image</p>
             <div class="center-div">
                 <img style="margin-top:20px;" src={demo_img} width="85%">
             </div>
@@ -523,6 +521,32 @@ def main():
                     ">
                 <img src={low_confidence} width="65%">
             </div>
+
+            <br></br>
+            <p class="sub-header-font"><i class="bi bi-caret-right-fill"></i> Switching the Source</p>
+            <p class="medium-font" style="margin-left:50px;">
+                Streamlit offers multiple sources for trash detection including proving a static image and using your camera to capture real time data without needing to upload an image. This offers the users the freedom to check for a specific image or use it directly.
+            </p>
+            <p class="medium-font" style="margin-left:50px; margin-bottom:30px;">
+                Webcam feature functions in a cloned setup, and support for Streamlit Cloud is in progress.
+            </p>
+
+            <br></br>
+            <p class="sub-header-font"><i class="bi bi-caret-right-fill"></i> Saving The Output</p>
+            <p class="medium-font" style="margin-left:50px;">
+                In the sidebar there's an option "Save Output", enabling it results in genreation of a physical copy of the generated result. 
+            </p>
+            <p class="medium-font" style="margin-left:50px; margin-bottom:30px;">
+                This feature functions in a cloned setup, and support for Streamlit Cloud is in progress.
+            </p>
+            <br></br>
+            <p class="sub-header-font"><i class="bi bi-caret-right-fill"></i> Switching Models</p>
+            <p class="medium-font" style="margin-left:50px;">
+                WasteWise offers different models for trash in different environments and you can switch between these models in the dropdown present in the top of the sidebar. This enables efficiency for different use cases of these models in different places.
+            </p>
+            <p class="medium-font" style="margin-left:50px; margin-bottom:30px;">
+                Garbage Detection provides us the usual trash detection for household and industrial waste while Water Waste Detection offers detection of trash in water bodies such as lakes, oceans and rivers focusing on the waste present in such water bodies for better accuracy.
+            </p>
             """,
             unsafe_allow_html=True
         )
@@ -674,7 +698,7 @@ def main():
             st.markdown("""
                         <div class="wrapper">
                         <p class="medium-font">I'm <b><u>Vedant Sudhir Patil</u></b>, a web developer and machine learning engineer.<br></br>
-                                            I contributed to Social Summer of Code, Season 3, and specialize in building impactful projects using Python, JavaScript, Java, React.js and Node.js.
+                                            I'm the winner of the AWS Amplify Hackathon, and I've contributed to Social Summer of Code, Season 3. I specialize in building impactful projects using Python, JavaScript, Java, React.js, and Node.js.
                         </p>
                         </div>
                         """,unsafe_allow_html=True)
